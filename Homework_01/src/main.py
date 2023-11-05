@@ -2,6 +2,8 @@ import pandas as pd
 import string
 from shingling import Shingling
 from compareSets import CompareSets
+from minHashing import MinHashing
+from compareSignatures import CompareSignatures
 
 def preprocess(text):
     text = text.lower()
@@ -25,11 +27,18 @@ def main():
     print(true_news.head())
 
     shingling = Shingling(10)
-    result1 = shingling.shingling(fake_news['text'][0])
-    result2 = shingling.shingling(true_news['text'][0])
+    shingComparator = CompareSets()
+    minHashing = MinHashing(50)
+    Sigcomparator = CompareSignatures()
 
-    comparator = CompareSets()
-    print(comparator.jaccard_similarity(result1, result2))
+    for i in range(10):
+        for j in range(10):
+            shing1 = shingling.shingling(fake_news.iloc[i]['text'])
+            shing2 = shingling.shingling(true_news.iloc[j]['text'])
+            print(shingComparator.jaccard_similarity(shing1, shing2))
+            signature1 = minHashing.minhas_signatures(shing1)
+            signature2 = minHashing.minhas_signatures(shing2)
+            print(Sigcomparator.similarity(signature1, signature2))
 
 if __name__ == '__main__':
     main()
