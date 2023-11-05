@@ -1,7 +1,7 @@
 import functools
 
 
-class shingling:
+class Shingling:
     def __init__(self, k):
         self.k = k
         self.shingling_dict = dict()
@@ -11,15 +11,16 @@ class shingling:
     def hash(self, shingling):
         hash_value = hash(shingling)
 
-        if hash_value not in self._shingling_to_int:
-            self._shingling_to_int[hash_value] = self._shingling_number
-            self._shingling_number += 1
-        return self._shingling_to_int[hash_value]
+        if hash_value not in self.shingling_dict:
+            self.shingling_dict[hash_value] = self.shinglings_count
+            self.shinglings_count += 1
+        return self.shingling_dict[hash_value]
 
+    @functools.lru_cache() # Caches to optimize performances
     def shingling(self, text):
         result = set()
 
-        for i in range(len(text) - self.k + 1):
+        for i in range(len(text) - self.k):
             shingle = text[i:i + self.k]
             result.add(self.hash(shingle))
 
