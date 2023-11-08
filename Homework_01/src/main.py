@@ -41,11 +41,6 @@ def main():
             signature1 = minHashing.minhas_signatures(shing1)
             signature2 = minHashing.minhas_signatures(shing2)
             print(Sigcomparator.similarity(signature1, signature2))
-            signatures = [signature1, signature2]
-            band = 40
-            threshold = 0.5  # (1/40)^(1/5) = 0.478
-            pairs = LSH.findSimilarPairs(signatures, band, threshold)
-            print(pairs)
 
     all_documents = true_news['text'].values
     n_documents = [10, 100, 500, 1000, 2000, 3000, 4000, 5000]
