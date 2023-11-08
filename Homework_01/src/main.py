@@ -4,7 +4,8 @@ from shingling import Shingling
 from compareSets import CompareSets
 from minHashing import MinHashing
 from compareSignatures import CompareSignatures
-
+import numpy as np
+import lsh
 def preprocess(text):
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
@@ -30,6 +31,7 @@ def main():
     shingComparator = CompareSets()
     minHashing = MinHashing(50)
     Sigcomparator = CompareSignatures()
+    LSH = lsh.LSH()
 
     for i in range(10):
         for j in range(10):
@@ -39,6 +41,42 @@ def main():
             signature1 = minHashing.minhas_signatures(shing1)
             signature2 = minHashing.minhas_signatures(shing2)
             print(Sigcomparator.similarity(signature1, signature2))
+            signatures = [signature1, signature2]
+            band = 40
+            threshold = 0.5  # (1/40)^(1/5) = 0.478
+            pairs = LSH.findSimilarPairs(signatures, band, threshold)
+            print(pairs)
+
+    all_documents = true_news['text'].values
+    n_documents = [10, 100, 500, 1000, 2000, 3000, 4000, 5000]
+    generator = np.random.default_rng(seed=42)
+
+    # compare n documents with each other
+    for n in n_documents:
+        documents = generator.choice(all_documents, n)
+        print('number of documents:', n)
+        tokens =   [shingling.shingling(document) for document in documents]
+        n = len(tokens)
+        similarity_matrix = np.zeros((n, n))
+        for i in range(n):
+            for j in range(n):
+                similarity_matrix[i, j] = shingComparator.jaccard_similarity(tokens[i], tokens[j])
+
+        print(similarity_matrix)
+
+    # compare n documents with each other to find similar pairs using LSH
+    for n in n_documents:
+        documents = generator.choice(all_documents, n)
+        print('number of documents:', n)
+#         get tokens for all documents
+        tokens = [shingling.shingling(document) for document in documents]
+        min_hashing = MinHashing(500)
+        signatures = [min_hashing.minhas_signatures(token) for token in tokens]
+        band = 40
+        threshold = 0.5  # (1/40)^(1/5) = 0.478
+        pairs = LSH.findSimilarPairs(signatures, band, threshold)
+        print(pairs)
+
 
 if __name__ == '__main__':
     main()
