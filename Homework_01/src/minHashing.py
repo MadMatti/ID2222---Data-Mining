@@ -2,7 +2,7 @@ import random
 
 class MinHashing:
 
-    def __init__(self, numHashes):
+    def __init__(self, numHashes=50):
         self.num_hashes = numHashes
         self.max_value = 2 ** 32 - 1
         self.max_shingle_id = 2 ** 20 - 1

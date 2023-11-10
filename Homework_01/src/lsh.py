@@ -2,7 +2,7 @@
 Compute similar pairs of documents using LSH.
 """
 
-from typing import List, Tuple
+from typing import List
 
 
 class LSH:

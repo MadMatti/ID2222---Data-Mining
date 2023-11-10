@@ -37,14 +37,14 @@ def main():
     execution_times_jaccard = []
     execution_times_lsh = []
 
-    for i in range(10):
-        for j in range(10):
-            shing1 = shingling.shingling(fake_news.iloc[i]['text'])
-            shing2 = shingling.shingling(true_news.iloc[j]['text'])
-            print(shingComparator.jaccard_similarity(shing1, shing2))
-            signature1 = minHashing.minhas_signatures(shing1)
-            signature2 = minHashing.minhas_signatures(shing2)
-            print(Sigcomparator.similarity(signature1, signature2))
+    # for i in range(10):
+    #     for j in range(10):
+    #         shing1 = shingling.shingling(fake_news.iloc[i]['text'])
+    #         shing2 = shingling.shingling(true_news.iloc[j]['text'])
+    #         print(shingComparator.jaccard_similarity(shing1, shing2))
+    #         signature1 = minHashing.minhas_signatures(shing1)
+    #         signature2 = minHashing.minhas_signatures(shing2)
+    #         print(Sigcomparator.similarity(signature1, signature2))
 
     all_documents = true_news['text'].values
     n_documents = [10, 100, 500, 1000, 5000]

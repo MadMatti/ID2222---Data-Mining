@@ -2,7 +2,7 @@ import functools
 
 
 class Shingling:
-    def __init__(self, k):
+    def __init__(self, k=10):
         self.k = k
         self.shingling_dict = dict()
         self.shinglings_count = 0
