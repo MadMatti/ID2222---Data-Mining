@@ -10,12 +10,15 @@ from minHashing import MinHashing
 import lsh
 
 def preprocess(text):
+    '''Do not modify this function'''
     # Convert to lowercase and remove punctuation
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
     return text
 
+
 def load_data():
+    '''Do not modify this function'''
     # Load data from CSV files and preprocess text
     fake_news = pd.read_csv('../data/Fake.csv')
     true_news = pd.read_csv('../data/True.csv')
@@ -24,6 +27,7 @@ def load_data():
     true_news['text'] = true_news['text'].apply(preprocess)
 
     return fake_news, true_news
+
 
 def compare_documents_similarity(shingling, shingComparator, minHashing, Sigcomparator, true_news):
     # Compare the first 10 documents for Jaccard and MinHash Similarity
@@ -35,6 +39,7 @@ def compare_documents_similarity(shingling, shingComparator, minHashing, Sigcomp
             signature1 = minHashing.minhas_signatures(shing1)
             signature2 = minHashing.minhas_signatures(shing2)
             print("Minhash Signature Similarity:", Sigcomparator.similarity(signature1, signature2))
+
 
 def compare_execution_times(shingling, shingComparator, minHashing, LSH, all_documents, n_documents, generator):
     # Compare execution times for Jaccard and LSH with varying document sizes
@@ -68,6 +73,7 @@ def compare_execution_times(shingling, shingComparator, minHashing, LSH, all_doc
 
     return execution_times_jaccard, execution_times_lsh
 
+
 def plot_execution_times(n_documents, execution_times_jaccard, execution_times_lsh):
     # Plot the execution times for Jaccard and LSH
     plt.figure(figsize=(10, 5))
@@ -79,6 +85,7 @@ def plot_execution_times(n_documents, execution_times_jaccard, execution_times_l
     plt.legend()
     plt.grid(True)
     plt.show()
+
 
 def compare_band_size_vs_similar_pairs(shingling, minHashing, LSH, all_documents, n, generator, band_sizes):
     # Compare band size vs number of similar pairs
@@ -100,6 +107,8 @@ def compare_band_size_vs_similar_pairs(shingling, minHashing, LSH, all_documents
     plt.title("Band Size vs Number of Similar Pairs")
     plt.grid(True)
     plt.show()
+
+
 def main():
     fake_news, true_news = load_data()
 
