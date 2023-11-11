@@ -2,19 +2,21 @@ import pandas as pd
 import string
 import time
 import matplotlib.pyplot as plt
+import numpy as np
 from shingling import Shingling
 from compareSets import CompareSets
-from minHashing import MinHashing
 from compareSignatures import CompareSignatures
-import numpy as np
+from minHashing import MinHashing
 import lsh
+
 def preprocess(text):
+    # Convert to lowercase and remove punctuation
     text = text.lower()
     text = text.translate(str.maketrans('', '', string.punctuation))
-
     return text
 
 def load_data():
+    # Load data from CSV files and preprocess text
     fake_news = pd.read_csv('../data/Fake.csv')
     true_news = pd.read_csv('../data/True.csv')
 
@@ -23,67 +25,51 @@ def load_data():
 
     return fake_news, true_news
 
-def main():
-    fake_news, true_news = load_data()
+def compare_documents_similarity(shingling, shingComparator, minHashing, Sigcomparator, true_news):
+    # Compare the first 10 documents for Jaccard and MinHash Similarity
+    for i in range(10):
+        for j in range(10):
+            shing1 = shingling.shingling(true_news.iloc[i]['text'])
+            shing2 = shingling.shingling(true_news.iloc[j]['text'])
+            print("Jaccard Similarity:", shingComparator.jaccard_similarity(shing1, shing2))
+            signature1 = minHashing.minhas_signatures(shing1)
+            signature2 = minHashing.minhas_signatures(shing2)
+            print("Minhash Signature Similarity:", Sigcomparator.similarity(signature1, signature2))
 
-    print(fake_news.head())
-    print(true_news.head())
-
-    shingling = Shingling(10)
-    shingComparator = CompareSets()
-    minHashing = MinHashing(50)
-    Sigcomparator = CompareSignatures()
-    LSH = lsh.LSH()
+def compare_execution_times(shingling, shingComparator, minHashing, LSH, all_documents, n_documents, generator):
+    # Compare execution times for Jaccard and LSH with varying document sizes
     execution_times_jaccard = []
     execution_times_lsh = []
 
-    # for i in range(10):
-    #     for j in range(10):
-    #         shing1 = shingling.shingling(fake_news.iloc[i]['text'])
-    #         shing2 = shingling.shingling(true_news.iloc[j]['text'])
-    #         print(shingComparator.jaccard_similarity(shing1, shing2))
-    #         signature1 = minHashing.minhas_signatures(shing1)
-    #         signature2 = minHashing.minhas_signatures(shing2)
-    #         print(Sigcomparator.similarity(signature1, signature2))
-
-    all_documents = true_news['text'].values
-    n_documents = [10, 100, 500, 1000, 5000]
-    generator = np.random.default_rng(seed=42)
-
-    # compare n documents with each other
-    start = time.time()
     for n in n_documents:
         documents = generator.choice(all_documents, n)
-        print('number of documents:', n)
-        tokens =   [shingling.shingling(document) for document in documents]
-        n = len(tokens)
-        similarity_matrix = np.zeros((n, n))
-        for i in range(n):
-            for j in range(n):
-                similarity_matrix[i, j] = shingComparator.jaccard_similarity(tokens[i], tokens[j])
+        print('Number of documents:', n)
+
+        # Jaccard Similarity
+        start = time.time()
+        tokens = [shingling.shingling(document) for document in documents]
+        similarity_matrix = np.array([[shingComparator.jaccard_similarity(tokens[i], tokens[j]) for j in range(n)] for i in range(n)])
         end = time.time()
         execution_times_jaccard.append(end - start)
         print(f"Jaccard Execution time for {n} documents:", end - start)
-        print(similarity_matrix)
 
-    # compare n documents with each other to find similar pairs using LSH
-    start = time.time()
-    for n in n_documents:
-        documents = generator.choice(all_documents, n)
-        print('number of documents:', n)
-#         get tokens for all documents
+        # LSH Similarity
+        start = time.time()
         tokens = [shingling.shingling(document) for document in documents]
         min_hashing = MinHashing(500)
         signatures = [min_hashing.minhas_signatures(token) for token in tokens]
         band = 40
-        threshold = 0.5  # (1/40)^(1/5) = 0.478
+        threshold = 0.5
         pairs = LSH.findSimilarPairs(signatures, band, threshold)
         end = time.time()
         execution_times_lsh.append(end - start)
         print(f"LSH Execution time for {n} documents:", end - start)
         print(pairs)
 
-    # Plot the execution times
+    return execution_times_jaccard, execution_times_lsh
+
+def plot_execution_times(n_documents, execution_times_jaccard, execution_times_lsh):
+    # Plot the execution times for Jaccard and LSH
     plt.figure(figsize=(10, 5))
     plt.plot(n_documents, execution_times_jaccard, label="Jaccard")
     plt.plot(n_documents, execution_times_lsh, label="LSH")
@@ -94,18 +80,19 @@ def main():
     plt.grid(True)
     plt.show()
 
-#     band size vs number of similar pairs
-    band_sizes = [20, 40, 60, 80]  # Different band sizes to test
-    n = 100  # Number of documents
+def compare_band_size_vs_similar_pairs(shingling, minHashing, LSH, all_documents, n, generator, band_sizes):
+    # Compare band size vs number of similar pairs
     documents = generator.choice(all_documents, n)
     tokens = [shingling.shingling(document) for document in documents]
     min_hashing = MinHashing(500)
     signatures = [min_hashing.minhas_signatures(token) for token in tokens]
-    threshold = 0.5  # (1/40)^(1/5) = 0.478
+    threshold = 0.5
     n_pairs = []
+
     for band in band_sizes:
         pairs = LSH.findSimilarPairs(signatures, band, threshold)
         n_pairs.append(len(pairs))
+
     plt.figure(figsize=(10, 5))
     plt.plot(band_sizes, n_pairs)
     plt.xlabel("Band Size")
@@ -113,10 +100,27 @@ def main():
     plt.title("Band Size vs Number of Similar Pairs")
     plt.grid(True)
     plt.show()
+def main():
+    fake_news, true_news = load_data()
 
+    print("First 10 Documents Comparison:")
+    shingling = Shingling(10)
+    shingComparator = CompareSets()
+    minHashing = MinHashing(50)
+    Sigcomparator = CompareSignatures()
+    compare_documents_similarity(shingling, shingComparator, minHashing, Sigcomparator, true_news)
 
+    all_documents = true_news['text'].values
+    n_documents = [10, 100, 500, 1000, 5000]
+    generator = np.random.default_rng(seed=42)
 
+    print("\nComparison of Execution Times:")
+    execution_times_jaccard, execution_times_lsh = compare_execution_times(shingling, shingComparator, minHashing, lsh.LSH(), all_documents, n_documents, generator)
+    plot_execution_times(n_documents, execution_times_jaccard, execution_times_lsh)
 
+    print("\nBand Size vs Number of Similar Pairs:")
+    band_sizes = [20, 40, 60, 80]
+    compare_band_size_vs_similar_pairs(shingling, minHashing, lsh.LSH(), all_documents, 100, generator, band_sizes)
 
 if __name__ == '__main__':
     main()
