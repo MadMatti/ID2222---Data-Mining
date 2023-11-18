@@ -3,7 +3,7 @@ from typing import List, Set, Dict, FrozenSet, Tuple
 from itertools import combinations
 from tqdm import tqdm
 
-class AprioriAssociation:
+class AssociationRules:
 
     def __init__(self, transactions: List[Set[int]], frequent_itemsets: Dict[FrozenSet[int], int], min_support: int, min_confidence: float):
         self.transactions = transactions

@@ -1,6 +1,6 @@
 import os
 from apriori import AprioriAlgorithm
-from association import AprioriAssociation
+from association import AssociationRules
 
 def format_itemset(itemset):
     return ', '.join(map(str, sorted(itemset)))
@@ -50,14 +50,34 @@ def main_rules():
     candidate_item_sets = apiroi.generate_candidate_item_sets(frequent_singletons.keys(), 2)
     filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, 2, s=min_support)
 
-    rules_generator = AprioriAssociation(transactions, filtered_frequent_item_sets, min_support=100, min_confidence=0.7)
+    rules_generator = AssociationRules(transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8)
     rules = rules_generator.generate_rules()
 
+    print(f"Rules with itemsets of length {2}: {len(rules)}")
     for rule in rules:
         antecedent, consequent, support, confidence = rule
         formatted_antecedent = format_itemset(antecedent)
         formatted_consequent = format_itemset(consequent)
-        print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")
+        print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")  
+
+    for i in range(3, 5 + 1):
+        candidate_item_sets = apiroi.generate_candidate_item_sets(filtered_frequent_item_sets.keys(), i)
+
+        filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, i, s=min_support)
+        rules_generator = AssociationRules(transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8)
+        rules = rules_generator.generate_rules()
+        print(f"Rules with itemsets of length {i}: {len(rules)}")
+        for rule in rules:
+            antecedent, consequent, support, confidence = rule
+            formatted_antecedent = format_itemset(antecedent)
+            formatted_consequent = format_itemset(consequent)
+            print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")  
+
+    # for rule in rules:
+    #     antecedent, consequent, support, confidence = rule
+    #     formatted_antecedent = format_itemset(antecedent)
+    #     formatted_consequent = format_itemset(consequent)
+    #     print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")
 
 
 if __name__ == '__main__':
