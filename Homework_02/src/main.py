@@ -1,7 +1,6 @@
 import os
 import time
 import matplotlib.pyplot as plt
-from matplotlib.ticker import MaxNLocator
 
 from apriori import AprioriAlgorithm
 from association import AssociationRules
@@ -11,7 +10,7 @@ def format_itemset(itemset):
     return ", ".join(map(str, sorted(itemset)))
 
 
-def main():
+def main_itemsets():
     path = os.path.dirname(os.getcwd())
     data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
@@ -87,48 +86,39 @@ def main_rules():
     path = os.path.dirname(os.getcwd())
     data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
-    min_support = 100
+    min_support = 500
     transactions = apiroi.read_dataset(data_path)
 
+    total_times = []  # Sum of candidate_times and frequent_times
+    rules_lengths = []  # Length of frequent items
+    lengths = []
+
     frequent_singletons = apiroi.find_frequent_singletons(s=min_support)
-    candidate_item_sets = apiroi.generate_candidate_item_sets(
-        frequent_singletons.keys(), 2
-    )
-    filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(
-        candidate_item_sets, 2, s=min_support
-    )
 
-    rules_generator = AssociationRules(
-        transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8
-    )
-    rules = rules_generator.generate_rules()
-
-    print(f"Rules with itemsets of length {2}: {len(rules)}")
-    for rule in rules:
-        antecedent, consequent, support, confidence = rule
-        formatted_antecedent = format_itemset(antecedent)
-        formatted_consequent = format_itemset(consequent)
-        print(
-            f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}"
-        )
-
-    for i in range(3, 5 + 1):
+    i = 2
+    while frequent_singletons:
         candidate_item_sets = apiroi.generate_candidate_item_sets(
-            filtered_frequent_item_sets.keys(), i
+            frequent_singletons.keys(), i
         )
 
         filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(
             candidate_item_sets, i, s=min_support
         )
+
         rules_generator = AssociationRules(
-            transactions,
-            filtered_frequent_item_sets,
-            min_support=150,
-            min_confidence=0.8,
+        transactions, filtered_frequent_item_sets, min_support=550, min_confidence=0.8
         )
+        start_time = time.time()
         rules = rules_generator.generate_rules()
+        total_time = time.time() - start_time
+
+        # Append sum of times and length
+        total_times.append(total_time)
+        rules_lengths.append(len(rules))
+        lengths.append(i)
+
         print(f"Rules with itemsets of length {i}: {len(rules)}")
-        for rule in rules:
+        for rule in rules[:10]:
             antecedent, consequent, support, confidence = rule
             formatted_antecedent = format_itemset(antecedent)
             formatted_consequent = format_itemset(consequent)
@@ -136,13 +126,30 @@ def main_rules():
                 f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}"
             )
 
-    # for rule in rules:
-    #     antecedent, consequent, support, confidence = rule
-    #     formatted_antecedent = format_itemset(antecedent)
-    #     formatted_consequent = format_itemset(consequent)
-    #     print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")
+        i += 1
+        frequent_singletons = filtered_frequent_item_sets
+
+    # Plotting Total Time
+    plt.figure(figsize=(10, 5))
+    plt.plot(lengths, total_times, label="Total Time (To generate Rules)")
+    plt.xlabel("Item Set Length")
+    plt.ylabel("Time (seconds)")
+    plt.title("Total Time vs Item Set Length")
+    plt.xticks(lengths)
+    plt.legend()
+    plt.show()
+
+    # Plotting Length of Rules
+    plt.figure(figsize=(10, 5))
+    plt.plot(lengths, rules_lengths, label="Length of Rules", color="orange")
+    plt.xlabel("Item Set Length")
+    plt.ylabel("Length of Rules")
+    plt.title("Length of Rules vs Item Set Length")
+    plt.xticks(lengths)
+    plt.legend()
+    plt.show()
 
 
 if __name__ == "__main__":
-    main()
-    # main_rules()
+    # main_itemsets()
+    main_rules()

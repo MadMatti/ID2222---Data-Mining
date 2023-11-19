@@ -1,4 +1,4 @@
-from collections import defaultdict, Counter
+from collections import Counter
 from typing import List, Set, Dict, FrozenSet
 from itertools import combinations
 
