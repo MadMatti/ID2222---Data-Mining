@@ -1,56 +1,106 @@
 import os
+import time
+import matplotlib.pyplot as plt
+from matplotlib.ticker import MaxNLocator
+
 from apriori import AprioriAlgorithm
 from association import AssociationRules
 
+
 def format_itemset(itemset):
-    return ', '.join(map(str, sorted(itemset)))
+    return ", ".join(map(str, sorted(itemset)))
+
 
 def main():
     path = os.path.dirname(os.getcwd())
-    data_path = os.path.join(path, 'data', 'T10I4D100K.dat')
+    data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
     min_support = 100
-    max_item_set_length = 5
+
+    # Initialize lists to store times and lengths
+    total_times = []  # Sum of candidate_times and frequent_times
+    frequent_lengths = []  # Length of frequent items
+    lengths = []
 
     frequent_singletons = apiroi.find_frequent_singletons(s=min_support)
     print(f"Frequent Singletons: {len(frequent_singletons)}")
-    # Print the first 10 frequent singletons
-    print({format_itemset(k): frequent_singletons[k] for k in list(frequent_singletons)[:10]})
+    print(
+        {
+            format_itemset(k): frequent_singletons[k]
+            for k in list(frequent_singletons)[:10]
+        }
+    )
 
+    i = 2
+    while frequent_singletons:
+        start_time_candidate = time.time()
+        candidate_item_sets = apiroi.generate_candidate_item_sets(
+            frequent_singletons.keys(), i
+        )
+        candidate_time = time.time() - start_time_candidate
 
-    candidate_item_sets = apiroi.generate_candidate_item_sets(frequent_singletons.keys(), 2)
-    print(f"Candidate Item Sets: {len(candidate_item_sets)}")
-    print([format_itemset(itemset) for itemset in candidate_item_sets][:10])
+        start_time_frequent = time.time()
+        filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(
+            candidate_item_sets, i, s=min_support
+        )
+        frequent_time = time.time() - start_time_frequent
 
+        # Append sum of times and length
+        total_times.append(candidate_time + frequent_time)
+        frequent_lengths.append(len(filtered_frequent_item_sets))
+        lengths.append(i)
 
-    filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, 2, s=min_support)
-    print(f"Frequent Item Sets: {len(filtered_frequent_item_sets)}")
-    for item_set, support in [(format_itemset(iter[0]), iter[1]) for iter in filtered_frequent_item_sets.items()][:10]: 
-        print(f"Item Set: {item_set}, Support: {support}")
-
-
-    for i in range(3, max_item_set_length + 1):
-        candidate_item_sets = apiroi.generate_candidate_item_sets(filtered_frequent_item_sets.keys(), i)
-        print([format_itemset(itemset) for itemset in candidate_item_sets][:10])
-
-        filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, i, s=min_support)
+        print(f"Candidate Item Sets of length {i}: {len(candidate_item_sets)}")
         print(f"Frequent Item Sets of length {i}: {len(filtered_frequent_item_sets)}")
-        for item_set, support in [(format_itemset(iter[0]), iter[1]) for iter in filtered_frequent_item_sets.items()][:10]:
-            print(f"Item Set: {item_set}, Support: {support}")
+
+        i += 1
+        frequent_singletons = filtered_frequent_item_sets
+
+    # Plotting Total Time
+    plt.figure(figsize=(10, 5))
+    plt.plot(
+        lengths,
+        total_times,
+        label="Total Time (To generate Candidate + Frequent Item Sets)",
+    )
+    plt.xlabel("Item Set Length")
+    plt.ylabel("Time (seconds)")
+    plt.title("Total Time vs Item Set Length")
+    plt.xticks(lengths)
+    plt.legend()
+    plt.show()
+
+    # Plotting Length of Frequent Items
+    plt.figure(figsize=(10, 5))
+    plt.plot(
+        lengths, frequent_lengths, label="Length of Frequent Items", color="orange"
+    )
+    plt.xlabel("Item Set Length")
+    plt.ylabel("Length of Frequent Items")
+    plt.title("Length of Frequent Items vs Item Set Length")
+    plt.xticks(lengths)
+    plt.legend()
+    plt.show()
 
 
 def main_rules():
     path = os.path.dirname(os.getcwd())
-    data_path = os.path.join(path, 'data', 'T10I4D100K.dat')
+    data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
     min_support = 100
     transactions = apiroi.read_dataset(data_path)
 
     frequent_singletons = apiroi.find_frequent_singletons(s=min_support)
-    candidate_item_sets = apiroi.generate_candidate_item_sets(frequent_singletons.keys(), 2)
-    filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, 2, s=min_support)
+    candidate_item_sets = apiroi.generate_candidate_item_sets(
+        frequent_singletons.keys(), 2
+    )
+    filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(
+        candidate_item_sets, 2, s=min_support
+    )
 
-    rules_generator = AssociationRules(transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8)
+    rules_generator = AssociationRules(
+        transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8
+    )
     rules = rules_generator.generate_rules()
 
     print(f"Rules with itemsets of length {2}: {len(rules)}")
@@ -58,20 +108,33 @@ def main_rules():
         antecedent, consequent, support, confidence = rule
         formatted_antecedent = format_itemset(antecedent)
         formatted_consequent = format_itemset(consequent)
-        print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")  
+        print(
+            f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}"
+        )
 
     for i in range(3, 5 + 1):
-        candidate_item_sets = apiroi.generate_candidate_item_sets(filtered_frequent_item_sets.keys(), i)
+        candidate_item_sets = apiroi.generate_candidate_item_sets(
+            filtered_frequent_item_sets.keys(), i
+        )
 
-        filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(candidate_item_sets, i, s=min_support)
-        rules_generator = AssociationRules(transactions, filtered_frequent_item_sets, min_support=150, min_confidence=0.8)
+        filtered_frequent_item_sets = apiroi.filter_frequent_item_sets(
+            candidate_item_sets, i, s=min_support
+        )
+        rules_generator = AssociationRules(
+            transactions,
+            filtered_frequent_item_sets,
+            min_support=150,
+            min_confidence=0.8,
+        )
         rules = rules_generator.generate_rules()
         print(f"Rules with itemsets of length {i}: {len(rules)}")
         for rule in rules:
             antecedent, consequent, support, confidence = rule
             formatted_antecedent = format_itemset(antecedent)
             formatted_consequent = format_itemset(consequent)
-            print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")  
+            print(
+                f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}"
+            )
 
     # for rule in rules:
     #     antecedent, consequent, support, confidence = rule
@@ -80,6 +143,6 @@ def main_rules():
     #     print(f"Rule: {formatted_antecedent} -> {formatted_consequent}, Support: {support}, Confidence: {confidence}")
 
 
-if __name__ == '__main__':
-    # main()
-    main_rules()
+if __name__ == "__main__":
+    main()
+    # main_rules()
