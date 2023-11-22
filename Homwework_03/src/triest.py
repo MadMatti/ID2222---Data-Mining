@@ -1,6 +1,7 @@
-from typing import Set, FrozenSet
+from typing import Set, FrozenSet, DefaultDict
 from scipy.stats import bernoulli
 import random
+
 
 class TriestBase:
 
@@ -11,12 +12,14 @@ class TriestBase:
         self.S: Set[FrozenSet[int]] = set()
         self.t = 0
         self.tau = 0
+        self.edge_triangles = DefaultDict(int)
 
     def get_edge(self, row) -> FrozenSet[int]:
         # Split the line and return the two edges as a frozenset
 
         return frozenset([int(node) for node in row.split()])
 
+    @property
     def xi_norm(self) -> float:
         # Define the xi factor when exceeding the memory limit M
 
@@ -39,13 +42,39 @@ class TriestBase:
     def update_counters(self, edge: FrozenSet[int], decrement: bool) -> None:
         # Updates the triangle count based on the edge and its neighbours.
 
-        u, v = edge
-        neighbors_u = {other_vertex for (vertex, other_vertex) in self.S if vertex == u}
-        neighbors_v = {other_vertex for (vertex, other_vertex) in self.S if vertex == v}
+        common_neighbourhood = set.intersection(*[
+        {node for link in self.S if vertex in link for node in link if node != vertex}
+        for vertex in edge
+        ])
 
-        # Find common neighbors of u and v
-        common_neighbors = neighbors_u.intersection(neighbors_v)
+        change = -1 if decrement else +1
+        for vertex in common_neighbourhood:
+            self.tau += change
+            self.edge_triangles[vertex] += change
 
-        # Update triangle count
-        increment = -1 if decrement else 1
-        self.tau += increment * len(common_neighbors)
+            for node in edge:
+                self.edge_triangles[node] += change
+
+    def run(self) -> float:
+        # Run the TRIEST algorithm
+
+        if self.verbose:
+            print("Running TRIEST-BASE algorithm with M = {}".format(self.M))
+
+        with open(self.file, "r") as f:
+            # print the len of the file
+            for row in f:
+                edge = self.get_edge(row)
+                self.t += 1
+
+                if self.verbose and self.t % 1000 == 0:
+                    print("Processing the {}-th element in the stream".format(self.t))
+
+                if self.sample_edge(self.t):
+                    self.S.add(edge)
+                    self.update_counters(edge, decrement=False)
+
+                if self.verbose and self.t % 1000 == 0:
+                    print("Current estimate triangle count: {}".format(self.xi_norm * self.tau))
+
+        return self.xi_norm * self.tau
