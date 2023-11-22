@@ -14,7 +14,7 @@ def main_itemsets():
     path = os.path.dirname(os.getcwd())
     data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
-    min_support = 100
+    min_support = 500
 
     # Initialize lists to store times and lengths
     total_times = []  # Sum of candidate_times and frequent_times
@@ -86,7 +86,7 @@ def main_rules():
     path = os.path.dirname(os.getcwd())
     data_path = os.path.join(path, "data", "T10I4D100K.dat")
     apiroi = AprioriAlgorithm(data_path)
-    min_support = 500
+    min_support = 1000
     transactions = apiroi.read_dataset(data_path)
 
     total_times = []  # Sum of candidate_times and frequent_times
@@ -106,7 +106,7 @@ def main_rules():
         )
 
         rules_generator = AssociationRules(
-        transactions, filtered_frequent_item_sets, min_support=550, min_confidence=0.8
+        transactions, filtered_frequent_item_sets, min_support=1000, min_confidence=0.8
         )
         start_time = time.time()
         rules = rules_generator.generate_rules()
@@ -151,5 +151,5 @@ def main_rules():
 
 
 if __name__ == "__main__":
-    # main_itemsets()
-    main_rules()
+    main_itemsets()
+    # main_rules()
