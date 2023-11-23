@@ -67,14 +67,14 @@ class TriestBase:
                 edge = self.get_edge(row)
                 self.t += 1
 
-                if self.verbose and self.t % 1000 == 0:
+                if self.verbose and self.t % 10000 == 0:
                     print("Processing the {}-th element in the stream".format(self.t))
 
                 if self.sample_edge(self.t):
                     self.S.add(edge)
                     self.update_counters(edge, decrement=False)
 
-                if self.verbose and self.t % 1000 == 0:
+                if self.verbose and self.t % 10000 == 0:
                     print("Current estimate triangle count: {}".format(self.xi_norm * self.tau))
 
         return self.xi_norm * self.tau
