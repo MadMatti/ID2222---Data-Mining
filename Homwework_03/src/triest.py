@@ -1,4 +1,5 @@
-from typing import Set, FrozenSet, DefaultDict
+from typing import Set, FrozenSet
+from collections import defaultdict
 from scipy.stats import bernoulli
 import random
 
@@ -12,7 +13,7 @@ class TriestBase:
         self.S: Set[FrozenSet[int]] = set()
         self.t = 0
         self.tau = 0
-        self.edge_triangles = DefaultDict(int)
+        self.edge_triangles = defaultdict(int)
 
     def get_edge(self, row) -> FrozenSet[int]:
         # Split the line and return the two edges as a frozenset
@@ -62,7 +63,7 @@ class TriestBase:
             print("Running TRIEST-BASE algorithm with M = {}".format(self.M))
 
         with open(self.file, "r") as f:
-            # print the len of the file
+            
             for row in f:
                 edge = self.get_edge(row)
                 self.t += 1

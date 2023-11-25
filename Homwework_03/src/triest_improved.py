@@ -1,80 +1,85 @@
-from typing import Tuple, Callable, Set, DefaultDict, FrozenSet
+from typing import Set, FrozenSet
 from collections import defaultdict
 from scipy.stats import bernoulli
-from functools import reduce
 import random
 
 
-def _get_edge(line: str) -> FrozenSet[int]:
-    return frozenset([int(vertex) for vertex in line.split()])
-
-
 class TriestImproved:
-    def __init__(self, file: str, M: int):
-        self.file: str = file
-        self.M: int = M
+    """
+    Implementation of the Triest improved algorithm for estimating the number of triangles in a graph.
+    """
+
+    def __init__(self, file: str, M: int, verbose: bool = True):
+        self.file = file
+        self.M = M
+        self.verbose = verbose
         self.S: Set[FrozenSet[int]] = set()
-        self.t: int = 0
-        self.tau_vertices: DefaultDict[int, float] = defaultdict(float)
-        self.tau: float = 0
+        self.t = 0
+        self.tau = 0
+        self.tau_vertices = defaultdict(int)
+
+    def get_edge(self, line: str) -> FrozenSet[int]:
+        # Split the line and return the two edges as a frozenset
+
+        return frozenset([int(vertex) for vertex in line.split()])
 
     @property
     def eta(self) -> float:
         return max(1.0, ((self.t - 1) * (self.t - 2)) / (self.M * (self.M - 1)))
 
-    def _update_counters(
-        self, operator: Callable[[float, float], float], edge: FrozenSet[int]
-    ) -> None:
-        common_neighbourhood: Set[int] = reduce(
-            lambda a, b: a & b,
-            [
-                {
-                    node
-                    for link in self.S
-                    if vertex in link
-                    for node in link
-                    if node != vertex
-                }
-                for vertex in edge
-            ],
-        )
+    def sample_edge(self, t: int) -> bool:
+        # Determine if a new edge can be inserted in memory or if it exceeds the memory limit M.
+        # If the memory limit is exceeded, the edge is sampled with a probability of M/t and another edge is removed
+        # The difference wrt to Base is that the counter are always updated not only when the edge is sampled
 
-        for vertex in common_neighbourhood:
-            self.tau += operator(self.eta, 0)
-            self.tau_vertices[vertex] += operator(self.eta, 0)
-
-            for node in edge:
-                self.tau_vertices[node] += operator(self.eta, 0)
-
-    def _sample_edge(self, t: int) -> bool:
         if t <= self.M:
             return True
         elif bernoulli.rvs(p=self.M / t):
-            edge_to_remove: FrozenSet[int] = random.choice(list(self.S))
+            edge_to_remove = random.choice(list(self.S))
             self.S.remove(edge_to_remove)
             return True
         else:
             return False
 
+    def update_counters(self, edge: FrozenSet[int]) -> None:
+        # Updates the triangle count based on the edge and its neighbours. Similar to base implementation
+
+        common_neighbourhood = set.intersection(*[
+            {
+                node
+                for link in self.S if vertex in link
+                for node in link if node != vertex
+            }
+            for vertex in edge
+        ])
+
+        for vertex in common_neighbourhood:
+            self.tau += self.eta
+            self.tau_vertices[vertex] += self.eta
+
+            for node in edge:
+                self.tau_vertices[node] += self.eta
+
     def run(self) -> float:
-        with open(self.file, "r") as f:
+        if self.verbose:
+            print("Running TRIEST-IMPROVED algorithm with M = {}.".format(self.M))
+
+        with open(self.file, 'r') as f:
+
             for line in f:
-                edge = _get_edge(line)
+                edge = self.get_edge(line)
                 self.t += 1
 
-                if self.t % 1000 == 0:
-                    print("Currently sampling element {} in the stream.".format(self.t))
+                if self.verbose and self.t % 10000 == 0:
+                    print("Processing the {}-th element in the stream".format(self.t))
 
-                self._update_counters(lambda x, y: x + y, edge)
+                # Update the counters regardless of the sampling
+                self.update_counters(edge)
 
-                if self._sample_edge(self.t):
+                if self.sample_edge(self.t):
                     self.S.add(edge)
 
-                if self.t % 1000 == 0:
-                    print(
-                        "The current estimate for the number of triangles is {}.".format(
-                            self.tau
-                        )
-                    )
+                if self.verbose and self.t % 1000 == 0:
+                    print("Current estimate triangle count: {}".format(self.tau))
 
             return self.tau
