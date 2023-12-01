@@ -3,6 +3,21 @@ import numpy as np
 from scipy import linalg
 from sklearn.cluster import KMeans
 
+def load_graph(file: str, weight: bool = False) -> nx.Graph:
+    """
+    Takes a file containing edges in a graph and outputs the graph in the form of a networkx class.
+    """
+    if weight:
+        return nx.read_weighted_edgelist(
+            path=file,
+            delimiter=','
+        )
+    else:
+        return nx.read_edgelist(
+            path=file,
+            delimiter=','
+        )
+
 class SpectralClustering:
     """
     Implementation of the spectral clustering algorithm.
@@ -51,7 +66,7 @@ class SpectralClustering:
         Y = X / np.linalg.norm(X, axis=1, keepdims=True)
 
         # KMeans clustering in the reduced space
-        result = KMeans(n_clusters=k).fit(Y).labels_
+        result = KMeans(n_clusters=k, n_init=10).fit(Y).labels_
 
         # Fiedler vector computation using the second smallest eigenvalue of D - A
         _, vectors = linalg.eigh(D - A)
