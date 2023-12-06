@@ -42,7 +42,7 @@ class SpectralClustering:
         """
 
         # Convert graph to adjacency matrix
-        A = nx.convert_matrix.to_numpy_array(self.G)
+        A = nx.to_numpy_array(self.G)
 
         # Degree matrix
         D = np.diagflat(np.sum(A, axis=1))
