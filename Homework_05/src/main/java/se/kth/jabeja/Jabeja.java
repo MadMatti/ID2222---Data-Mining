@@ -1,6 +1,7 @@
 package se.kth.jabeja;
 
 import org.apache.log4j.Logger;
+import se.kth.jabeja.annealing.Annealer;
 import se.kth.jabeja.config.Config;
 import se.kth.jabeja.config.NodeSelectionPolicy;
 import se.kth.jabeja.io.FileIO;
@@ -9,6 +10,7 @@ import se.kth.jabeja.rand.RandNoGenerator;
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collector;
 
 public class Jabeja {
   final static Logger logger = Logger.getLogger(Jabeja.class);
@@ -19,15 +21,22 @@ public class Jabeja {
   private int round;
   private float T;
   private boolean resultFileCreated = false;
+  private final Annealer annealer;
 
   //-------------------------------------------------------------------
   public Jabeja(HashMap<Integer, Node> graph, Config config) {
     this.entireGraph = graph;
-    this.nodeIds = new ArrayList(entireGraph.keySet());
+    this.nodeIds = new ArrayList<>(entireGraph.keySet());
     this.round = 0;
     this.numberOfSwaps = 0;
     this.config = config;
-    this.T = config.getTemperature();
+    this.annealer = config
+            .getAnnealingType()
+            .getAnnealer(
+                    config.getTemperature(),
+                    config.getDelta(),
+                    config.getAlpha()
+            );
   }
 
 
@@ -40,20 +49,12 @@ public class Jabeja {
 
       //one cycle for all nodes have completed.
       //reduce the temperature
-      saCoolDown();
+      annealer.coolDown();
+      if(config.getRestartRounds()>=0 && round%config.getRestartRounds() == 0)
+          annealer.setTemperature(config.getTemperature());
+
       report();
     }
-  }
-
-  /**
-   * Simulated analealing cooling function
-   */
-  private void saCoolDown(){
-    // TODO for second task
-    if (T > 1)
-      T -= config.getDelta();
-    if (T < 1)
-      T = 1;
   }
 
   /**
@@ -61,55 +62,44 @@ public class Jabeja {
    * @param nodeId
    */
   private void sampleAndSwap(int nodeId) {
-    Node partner = null;
+    Optional<Node> partner = Optional.empty();
     Node nodep = entireGraph.get(nodeId);
 
-    if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
-            || config.getNodeSelectionPolicy() == NodeSelectionPolicy.LOCAL) {
+    if (
+            config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
+            || config.getNodeSelectionPolicy() == NodeSelectionPolicy.LOCAL
+    ) {
       // swap with random neighbors
-      // TODO
+      partner = findPartner(nodeId, getNeighbors(nodep));
     }
 
-    if (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
-            || config.getNodeSelectionPolicy() == NodeSelectionPolicy.RANDOM) {
+    if (
+            (config.getNodeSelectionPolicy() == NodeSelectionPolicy.HYBRID
+            || config.getNodeSelectionPolicy() == NodeSelectionPolicy.RANDOM)
+            && !partner.isPresent()
+    ) {
       // if local policy fails then randomly sample the entire graph
-      // TODO
+      partner = findPartner(nodeId, getSample(nodeId));
     }
 
     // swap the colors
-    // TODO
-  }
-
-  public Node findPartner(int nodeId, Integer[] nodes){
-
-    Node nodep = entireGraph.get(nodeId);
-
-    Node bestPartner = null;
-    double highestBenefit = 0;
-
-    // TODO
-
-    return bestPartner;
-  }
-
-  /**
-   * The the degreee on the node based on color
-   * @param node
-   * @param colorId
-   * @return how many neighbors of the node have color == colorId
-   */
-  private int getDegree(Node node, int colorId){
-    int degree = 0;
-    for(int neighborId : node.getNeighbours()){
-      Node neighbor = entireGraph.get(neighborId);
-      if(neighbor.getColor() == colorId){
-        degree++;
+    if(partner.isPresent()) {
+        int tempColor = nodep.getColor();
+        nodep.setColor(partner.get().getColor());
+        partner.get().setColor(tempColor);
+        numberOfSwaps++;
       }
-    }
-    return degree;
   }
 
-  /**
+  public Optional<Node> findPartner(int nodeId, Integer[] nodes){
+      return annealer.findPartner(
+              entireGraph.get(nodeId),
+              Arrays.stream(nodes).map(entireGraph::get).toArray(Node[] :: new),
+              entireGraph
+      );
+  }
+
+    /**
    * Returns a uniformly random sample of the graph
    * @param currentNodeId
    * @return Returns a uniformly random sample of the graph
@@ -118,18 +108,16 @@ public class Jabeja {
     int count = config.getUniformRandomSampleSize();
     int rndId;
     int size = entireGraph.size();
-    ArrayList<Integer> rndIds = new ArrayList<Integer>();
+    ArrayList<Integer> rndIds = new ArrayList<>();
 
-    while (true) {
-      rndId = nodeIds.get(RandNoGenerator.nextInt(size));
-      if (rndId != currentNodeId && !rndIds.contains(rndId)) {
-        rndIds.add(rndId);
-        count--;
-      }
+      do {
+          rndId = nodeIds.get(RandNoGenerator.nextInt(size));
+          if (rndId != currentNodeId && !rndIds.contains(rndId)) {
+              rndIds.add(rndId);
+              count--;
+          }
 
-      if (count == 0)
-        break;
-    }
+      } while (count != 0);
 
     Integer[] ids = new Integer[rndIds.size()];
     return rndIds.toArray(ids);
@@ -148,22 +136,20 @@ public class Jabeja {
     int rndId;
     int index;
     int size = list.size();
-    ArrayList<Integer> rndIds = new ArrayList<Integer>();
+    ArrayList<Integer> rndIds = new ArrayList<>();
 
     if (size <= count)
       rndIds.addAll(list);
     else {
-      while (true) {
-        index = RandNoGenerator.nextInt(size);
-        rndId = list.get(index);
-        if (!rndIds.contains(rndId)) {
-          rndIds.add(rndId);
-          count--;
-        }
+        do {
+            index = RandNoGenerator.nextInt(size);
+            rndId = list.get(index);
+            if (!rndIds.contains(rndId)) {
+                rndIds.add(rndId);
+                count--;
+            }
 
-        if (count == 0)
-          break;
-      }
+        } while (count != 0);
     }
 
     Integer[] arr = new Integer[rndIds.size()];
@@ -179,9 +165,8 @@ public class Jabeja {
   private void report() throws IOException {
     int grayLinks = 0;
     int migrations = 0; // number of nodes that have changed the initial color
-    int size = entireGraph.size();
 
-    for (int i : entireGraph.keySet()) {
+      for (int i : entireGraph.keySet()) {
       Node node = entireGraph.get(i);
       int nodeColor = node.getColor();
       ArrayList<Integer> nodeNeighbours = node.getNeighbours();
@@ -227,7 +212,9 @@ public class Jabeja {
             "RNSS" + "_" + config.getRandomNeighborSampleSize() + "_" +
             "URSS" + "_" + config.getUniformRandomSampleSize() + "_" +
             "A" + "_" + config.getAlpha() + "_" +
-            "R" + "_" + config.getRounds() + ".txt";
+            "R" + "_" + config.getRounds() + "_" +
+            "RESTART" + "_" + config.getRestartRounds() + "_" +
+            "ANNEALER_" + config.getAnnealingType() + ".txt";
 
     if (!resultFileCreated) {
       File outputDir = new File(config.getOutputDir());

@@ -3,6 +3,7 @@ package se.kth.jabeja.io;
 import org.apache.log4j.Logger;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
+import se.kth.jabeja.annealing.AnnealingType;
 import se.kth.jabeja.config.Config;
 import se.kth.jabeja.config.GraphInitColorPolicy;
 import se.kth.jabeja.config.NodeSelectionPolicy;
@@ -28,7 +29,7 @@ public class CLI {
   @Option(name = "-uniformRandSampleSize", usage = "Uniform random sample size.")
   private int UNIFORM_RAND_SAMPLE_SIZE = 6;
 
-  @Option(name = "-temp", usage = "Simulated annealing temperature.")
+  @Option(name = "-temperature", usage = "Simulated annealing temperature.")
   private float TEMPERATURE = 2;
 
   @Option(name = "-delta", usage = "Simulated annealing delta.")
@@ -37,7 +38,7 @@ public class CLI {
   @Option(name = "-seed", usage = "Seed.")
   private int SEED = 0;
 
-  @Option(name = "-alpha", usage = "Alpah parameter")
+  @Option(name = "-alpha", usage = "Alpha parameter")
   private float ALPHA = 2;
 
   @Option(name = "-randNeighborsSampleSize", usage = "Number of random neighbors sample size.")
@@ -57,31 +58,23 @@ public class CLI {
   @Option(name = "-outputDir", usage = "Location of the output file(s)")
   private static String OUTPUT_DIR = "./output";
 
+  @Option(name="-annealingType", usage = "Sets the annealing type. Support LINEAR, EXPONENTIAL, and BOLTZMANN")
+  private static String ANNEALING_TYPE = "LINEAR";
+  private AnnealingType annealingType = AnnealingType.LINEAR;
+
+  @Option(name="-restart", usage = "Sets the number of rounds after which the temperature is restarted to the original")
+  private int restartRounds = -1;
+
   public Config parseArgs(String[] args) throws FileNotFoundException {
     CmdLineParser parser = new CmdLineParser(this);
     parser.setUsageWidth(80);
     try {
       // parse the arguments.
       parser.parseArgument(args);
-      if (GRAPH_INIT_COLOR_SELECTION_POLICY.compareToIgnoreCase(GraphInitColorPolicy.RANDOM.toString()) == 0) {
-        graphInitColorSelectionPolicy = GraphInitColorPolicy.RANDOM;
-      } else if (GRAPH_INIT_COLOR_SELECTION_POLICY.compareToIgnoreCase(GraphInitColorPolicy.BATCH.toString()) == 0) {
-        graphInitColorSelectionPolicy = GraphInitColorPolicy.BATCH;
-      } else if (GRAPH_INIT_COLOR_SELECTION_POLICY.compareToIgnoreCase(GraphInitColorPolicy.ROUND_ROBIN.toString()) == 0) {
-        graphInitColorSelectionPolicy = GraphInitColorPolicy.ROUND_ROBIN;
-      } else {
-        throw new IllegalArgumentException("Initial color selection policy is not supported");
-      }
 
-      if (NODE_SELECTION_POLICY.compareToIgnoreCase(NodeSelectionPolicy.RANDOM.toString()) == 0) {
-        nodeSelectionPolicy = NodeSelectionPolicy.RANDOM;
-      } else if (NODE_SELECTION_POLICY.compareToIgnoreCase(NodeSelectionPolicy.LOCAL.toString()) == 0) {
-        nodeSelectionPolicy = NodeSelectionPolicy.LOCAL;
-      } else if (NODE_SELECTION_POLICY.compareToIgnoreCase(NodeSelectionPolicy.HYBRID.toString()) == 0) {
-        nodeSelectionPolicy = NodeSelectionPolicy.HYBRID;
-      } else {
-        throw new IllegalArgumentException("Node selection policy is not supported");
-      }
+      graphInitColorSelectionPolicy = GraphInitColorPolicy.valueOf(GRAPH_INIT_COLOR_SELECTION_POLICY.toUpperCase());
+      nodeSelectionPolicy = NodeSelectionPolicy.valueOf(NODE_SELECTION_POLICY.toUpperCase());
+      annealingType = AnnealingType.valueOf(ANNEALING_TYPE.toUpperCase());
 
     } catch (Exception e) {
       logger.error(e.getMessage());
@@ -110,6 +103,8 @@ public class CLI {
             .setNodeSelectionPolicy(nodeSelectionPolicy)
             .setGraphInitialColorPolicy(graphInitColorSelectionPolicy)
             .setOutputDir(OUTPUT_DIR)
-            .setAlpha(ALPHA);
+            .setAlpha(ALPHA)
+            .setAnnealingType(annealingType)
+            .setRestartRounds(restartRounds);
   }
 }
