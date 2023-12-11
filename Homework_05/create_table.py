@@ -1,12 +1,18 @@
 import subprocess
 import pandas as pd
 from pathlib import Path
+from tqdm import tqdm
 
 
 # Define the parameter combinations to test
 
 # annealing_types = ['LINEAR']
 # delta_values = [0.99, 0.9, 0.8]
+
+# annealing_types = ['EXPONENTIAL']
+# delta_values = [0.99, 0.95, 0.9, 0.8]
+# temperature_values = [10, 4, 2]
+# restart_values = [100, 250]
 
 annealing_types = ['EXPONENTIAL']
 delta_values = [0.99, 0.95, 0.9, 0.8]
@@ -23,7 +29,7 @@ output_dir.mkdir(parents=True, exist_ok=True)
 
 
 # Run the script for different parameter combinations
-for annealing_type in annealing_types:
+for annealing_type in tqdm(annealing_types, desc='Annealing Types'):
     for delta in delta_values:
         for temperature in temperature_values:
             for restarts in restart_values:

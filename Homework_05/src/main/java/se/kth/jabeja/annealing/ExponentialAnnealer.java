@@ -10,8 +10,6 @@ public class ExponentialAnnealer extends NonLinearAnnealer {
 
     @Override
     protected Double acceptanceProbability(Double oldCost, Double newCost, float temperature){
-        return newCost > oldCost? 1 : exp(
-                (newCost - oldCost) / temperature
-        );
+    return Math.exp((newCost - oldCost) / temperature);
     }
 }
